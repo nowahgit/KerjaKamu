@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return isAuth() && getUserData().role == 'admin';
+    }
+    function isVerifiedTrainer() {
+      return isAuth() && getUserData().role == 'trainer' && getUserData().status == 'verified';
+    }
+
+    // Users
+    match /users/{uid} {
+      allow read: if isAuth() && (isOwner(uid) || isAdmin());
+      allow create: if isAuth() && isOwner(uid);
+      allow update: if isAuth() && (isOwner(uid) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Trainers
+    match /trainers/{uid} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isOwner(uid);
+      allow update: if isAuth() && (isOwner(uid) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Trainer applications
+    match /trainer_applications/{uid} {
+      allow read: if isAuth() && (isOwner(uid) || isAdmin());
+      allow create: if isAuth() && isOwner(uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Bootcamp courses — semua authenticated user boleh baca
+    match /bootcamp_courses/{courseId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+      match /days/{dayId} {
+        allow read: if isAuth();
+        allow write: if isAdmin();
+      }
+    }
+
+    // Bootcamp progress — PENTING: user baca/tulis progress sendiri
+    match /bootcamp_progress/{uid} {
+      allow read, write: if isAuth() && isOwner(uid);
+      allow read: if isAdmin();
+      match /courses/{courseId} {
+        allow read, write: if isAuth() && isOwner(uid);
+      }
+    }
+
+    // Sessions
+    match /sessions/{sessionId} {
+      allow read: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuth();
+      allow update: if isAuth() && (
+        resource.data.trainerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Chats
+    match /chats/{chatId} {
+      allow read, write: if isAuth() &&
+        request.auth.uid in resource.data.participants;
+      match /messages/{msgId} {
+        allow read, write: if isAuth() &&
+          request.auth.uid in get(
+            /databases/$(database)/documents/chats/$(chatId)
+          ).data.participants;
+      }
+    }
+
+    // Jobs
+    match /jobs/{jobId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // Applications
+    match /applications/{appId} {
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isAuth();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Certificates
+    match /certificates/{certId} {
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+    // Analytics
+    match /analytics/{doc} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

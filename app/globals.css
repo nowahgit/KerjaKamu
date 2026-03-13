@@ -1,26 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-background: var(--bg);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-border-color: var(--border);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #FFFFFF;
+    --surface: #F5F8FF;
+    --card: #FFFFFF;
+    --primary: #1A56DB;
+    --primary-dark: #1040B0;
+    --accent: #0EA5E9;
+    --text-primary: #111827;
+    --text-muted: #6B7280;
+    --border: #E5E9F2;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0F172A;
+    --surface: #1E293B;
+    --card: #1E293B;
+    --primary: #3B82F6;
+    --primary-dark: #2563EB;
+    --text-primary: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border: #334155;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans transition-colors duration-300;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 300ms ease-out forwards;
+  }
+  .animate-progress-fill {
+    animation: progressFill 600ms ease-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes progressFill {
+    from { width: 0; }
+  }
+
+  .hover-card {
+    @apply transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg;
+  }
+  
+  .btn-hover {
+    @apply transition-colors duration-150 hover:brightness-90;
+  }
+  
+  .glass-effect {
+    @apply bg-surface/80 backdrop-blur-md border border-border-color/50;
+  }
 }

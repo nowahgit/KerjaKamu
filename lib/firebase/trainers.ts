@@ -1,8 +1,25 @@
 import {
   collection, doc, getDoc, getDocs,
-  query, where, serverTimestamp, addDoc, orderBy
+  query, where, serverTimestamp, addDoc, orderBy, setDoc
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db } from '@/lib/firebase'
+
+export async function submitTrainerApplication(uid: string, data: any, skckMetadata: any) {
+  const applicationRef = doc(db, 'trainer_applications', uid)
+  await setDoc(applicationRef, {
+    uid,
+    ...data,
+    skckMetadata,
+    status: 'pending',
+    appliedAt: serverTimestamp()
+  })
+  
+  // Also update user profile to show pending status
+  await setDoc(doc(db, 'users', uid), {
+    status: 'pending',
+    role: 'trainer' // Intent to be trainer, though status is pending
+  }, { merge: true })
+}
 
 export async function getTrainerWithStudents(trainerUid: string) {
   const trainerSnap = await getDoc(doc(db, 'trainers', trainerUid))

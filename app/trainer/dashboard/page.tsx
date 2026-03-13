@@ -57,8 +57,8 @@ export default function TrainerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {stats.map((s, i) => (
-          <div key={i} className="bg-card border border-border-color rounded-2xl p-6 shadow-sm hover-card">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-card border border-border-color rounded-2xl p-6 shadow-sm hover-card">
             <div className="flex justify-between items-start mb-4">
                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.bg}`}>
                  <s.icon className={s.color} size={24} />
@@ -93,8 +93,8 @@ export default function TrainerDashboard() {
                     + Buka Slot Sesi Baru
                   </button>
                 </div>
-              ) : sessions.map((s, i) => (
-                <div key={i} className="flex flex-col sm:flex-row gap-4 p-5 bg-surface border border-border-color rounded-xl hover:bg-border-color/50 transition-colors">
+              ) : sessions.map((s) => (
+                <div key={s.id} className="flex flex-col sm:flex-row gap-4 p-5 bg-surface border border-border-color rounded-xl hover:bg-border-color/50 transition-colors">
                   <div className="flex items-center gap-2 font-mono font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-lg shrink-0 w-fit">
                     <Clock size={16} /> 14:00 - 15:00
                   </div>
@@ -136,8 +136,8 @@ export default function TrainerDashboard() {
                 <div className="text-center py-8">
                   <p className="text-xs text-text-muted">Belum ada murid yang terhubung.</p>
                 </div>
-              ) : students.map((s, i) => (
-                <div key={i} className="flex gap-4 p-2 hover:bg-surface rounded-lg transition-colors group">
+              ) : students.map((s) => (
+                <div key={s.userId} className="flex gap-4 p-2 hover:bg-surface rounded-lg transition-colors group">
                     <div className="w-10 h-10 rounded-full bg-primary/10 shrink-0 flex items-center justify-center font-bold text-primary border border-primary/20 shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
                       {s.name ? s.name.split(" ").map((n: string) => n[0]).join("") : "U"}
                     </div>

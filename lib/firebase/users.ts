@@ -1,14 +1,15 @@
-import { db } from "../firebase";
+import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { UserProfile } from "@/types";
 
 export async function createUserProfile(uid: string, data: any) {
   await setDoc(doc(db, "users", uid), { ...data, createdAt: new Date().toISOString() }, { merge: true });
 }
 
-export async function getUserProfile(uid: string): Promise<any> {
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docSnap = await getDoc(doc(db, "users", uid));
   if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
+    return { id: docSnap.id, ...docSnap.data() } as UserProfile;
   }
   return null;
 }

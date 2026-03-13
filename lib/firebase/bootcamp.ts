@@ -2,7 +2,8 @@ import {
   collection, doc, getDoc, getDocs, setDoc,
   updateDoc, arrayUnion, serverTimestamp, orderBy, query
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db } from '@/lib/firebase'
+import { BootcampDay } from '@/types'
 
 export async function getAllCourses() {
   const snap = await getDocs(collection(db, 'bootcamp_courses'))
@@ -16,7 +17,7 @@ export async function getCourseWithDays(courseId: string) {
   const daysSnap = await getDocs(
     query(collection(db, 'bootcamp_courses', courseId, 'days'), orderBy('dayNumber'))
   )
-  const days = daysSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+  const days = daysSnap.docs.map(d => ({ id: d.id, ...d.data() } as BootcampDay))
 
   return { id: courseSnap.id, ...courseSnap.data(), days }
 }

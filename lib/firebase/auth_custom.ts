@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword } from 'firebase/auth'
-import { auth } from '../firebase'
+import { auth } from '@/lib/firebase'
 import { getUserProfile } from './users'
 
 export async function loginAndRedirect(email: string, password: string, router: any) {

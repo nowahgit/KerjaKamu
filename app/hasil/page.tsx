@@ -150,8 +150,8 @@ export default function Hasil() {
                     { name: "Canva Design", id: "canva", val: profile?.skillScores?.canva || 1, color: "bg-warning", text: "text-warning", icon: <AlertTriangle className="w-4 h-4" /> },
                     { name: "Literasi Digital", id: "digitalLiteracy", val: profile?.skillScores?.digitalLiteracy || 1, color: "bg-primary", text: "text-primary", icon: <CheckCircle2 className="w-4 h-4" /> }
 
-                  ].map((s, i) => (
-                    <div key={i}>
+                  ].map((s) => (
+                    <div key={s.id}>
                       <div className="flex justify-between text-sm mb-1.5 font-medium">
                         <span className="text-text-primary">{s.name}</span>
                         <span className={`font-mono ${s.text}`}>{s.val}% {profile?.skillScores ? s.icon : ''}</span>
@@ -212,8 +212,8 @@ export default function Hasil() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-color">
-                    {costOfLiving.map((row, i) => (
-                      <tr key={i} className={`hover:bg-surface/50 transition-colors ${row.top ? 'bg-primary/5' : ''}`}>
+                    {costOfLiving.map((row) => (
+                      <tr key={row.city} className={`hover:bg-surface/50 transition-colors ${row.top ? 'bg-primary/5' : ''}`}>
                         <td className="py-3 px-4 font-medium text-text-primary flex items-center gap-2">
                           {row.city} {row.top && <span className="inline-flex items-center" title="Rekomendasi Terbaik"><Trophy className="w-5 h-5 text-yellow-500" /></span>}
                         </td>
@@ -253,8 +253,8 @@ export default function Hasil() {
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {jobs.map((job, i) => (
-                    <div key={i} className="bg-card border border-border-color p-5 rounded-2xl shadow-sm hover-card flex flex-col h-full">
+                  {jobs.map((job) => (
+                    <div key={job.id} className="bg-card border border-border-color p-5 rounded-2xl shadow-sm hover-card flex flex-col h-full">
                       <div className="flex justify-between items-start mb-4">
                         <div className="font-mono text-xs font-bold text-success bg-success/10 px-2 py-1 rounded">{job.matchScore || 80}% MATCH</div>
                       </div>
@@ -375,9 +375,9 @@ export default function Hasil() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {profile.certificates.map((cert: any, idx: number) => (
+                  {profile.certificates.map((cert: any) => (
                     <a 
-                      key={idx} 
+                      key={cert.id} 
                       href={cert.pdfUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"

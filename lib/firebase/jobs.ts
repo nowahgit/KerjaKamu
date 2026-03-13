@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where, doc, updateDoc, addDoc, serverTimestamp, arrayUnion } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db } from '@/lib/firebase'
 import { getUserProfile } from './users'
+import { Job } from '@/types'
 
 export async function getMatchingJobs(uid: string) {
   const profile = await getUserProfile(uid)
@@ -9,7 +10,7 @@ export async function getMatchingJobs(uid: string) {
   const snap = await getDocs(query(collection(db, 'jobs'), where('isActive', '==', true)))
 
   const jobs = snap.docs.map(d => {
-    const job = { id: d.id, ...d.data() } as any
+    const job = { id: d.id, ...d.data() } as Job & { matchScore?: number; skillGaps?: any[] }
     const required = job.requiredSkills || {}
     let totalScore = 0, totalWeight = 0
 
@@ -36,8 +37,8 @@ export async function getMatchingJobs(uid: string) {
   })
 
   return jobs
-    .filter(j => j.matchScore > 30)
-    .sort((a, b) => b.matchScore - a.matchScore)
+    .filter(j => (j.matchScore ?? 0) > 30)
+    .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
     .slice(0, 6)
 }
 

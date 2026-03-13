@@ -57,8 +57,8 @@ export default function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {statsConfig.map((s, i) => (
-          <div key={i} className="bg-card border border-border-color rounded-2xl p-6 shadow-sm hover-card">
+        {statsConfig.map((s) => (
+          <div key={s.key} className="bg-card border border-border-color rounded-2xl p-6 shadow-sm hover-card">
             <div className="flex justify-between items-start mb-4">
                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.bg}`}>
                  <s.icon className={s.color} size={24} />

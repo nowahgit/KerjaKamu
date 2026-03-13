@@ -2,7 +2,7 @@ import {
   collection, getDocs, doc, updateDoc,
   query, where, serverTimestamp, getDoc
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db } from '@/lib/firebase'
 
 export async function getPendingTrainers() {
   const snap = await getDocs(

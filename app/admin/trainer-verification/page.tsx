@@ -87,7 +87,7 @@ export default function TrainerVerification() {
              >
                <option value="semua">Semua Status</option>
                <option value="pending">Tertunda (Pending)</option>
-               <option value="approved">Terverifikasi</option>
+               <option value="verified">Terverifikasi</option>
                <option value="rejected">Ditolak</option>
              </select>
           </div>
@@ -136,7 +136,7 @@ export default function TrainerVerification() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded inline-flex text-xs font-bold ${
-                      t.status === 'approved' ? 'bg-success/10 text-success' : t.status === 'rejected' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning'
+                      t.status === 'verified' ? 'bg-success/10 text-success' : t.status === 'rejected' ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning'
                     }`}>
                       {t.status.toUpperCase()}
                     </span>

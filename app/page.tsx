@@ -14,9 +14,6 @@ export default function Home() {
           <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary-dark dark:text-primary font-medium text-sm mb-6 border border-primary/20">
-                  <span className="animate-pulse"></span> PIDI Hackathon 2026
-                </div>
                 <h1 className="text-4xl md:text-5xl lg:text-[56px] leading-[1.1] font-extrabold text-text-primary tracking-tight mb-6">
                   Dari Tes ke Kerja dalam 
                   <span className="text-primary block mt-2">30 Hari</span>
@@ -172,7 +169,6 @@ export default function Home() {
                 <div className="w-24 h-24 mx-auto bg-surface rounded-full flex items-center justify-center border-4 border-background shadow-md mb-6 group-hover:-translate-y-2 transition-transform duration-300">
                   <TrendingUp className="w-10 h-10 text-primary" />
                 </div>
-                <div className="absolute top-[45px] left-1/2 -ml-3 hidden md:block w-6 h-6 bg-background rounded-full border-2 border-primary"></div>
                 <h4 className="font-bold text-lg text-text-primary mb-2">1. AI Skill Test</h4>
                 <p className="text-sm text-text-muted">Ikuti tes 5 menit. AI akan menganalisis kekuatan dan kelemahanmu secara presisi.</p>
               </div>
@@ -181,7 +177,6 @@ export default function Home() {
                 <div className="w-24 h-24 mx-auto bg-surface rounded-full flex items-center justify-center border-4 border-background shadow-md mb-6 group-hover:-translate-y-2 transition-transform duration-300">
                   <GraduationCap className="w-10 h-10 text-primary" />
                 </div>
-                <div className="absolute top-[45px] left-1/2 -ml-3 hidden md:block w-6 h-6 bg-background rounded-full border-2 border-primary"></div>
 
                 <h4 className="font-bold text-lg text-text-primary mb-2">2. Bootcamp 7 Hari</h4>
                 <p className="text-sm text-text-muted">Tingkatkan skill yang paling dibutuhkan industri dengan materi video dan kuis interaktif.</p>
@@ -191,7 +186,6 @@ export default function Home() {
                  <div className="w-24 h-24 mx-auto bg-surface rounded-full flex items-center justify-center border-4 border-background shadow-md mb-6 group-hover:-translate-y-2 transition-transform duration-300">
                   <Users className="w-10 h-10 text-primary" />
                 </div>
-                <div className="absolute top-[45px] left-1/2 -ml-3 hidden md:block w-6 h-6 bg-background rounded-full border-2 border-primary"></div>
 
                 <h4 className="font-bold text-lg text-text-primary mb-2">3. Mentor Privat</h4>
                 <p className="text-sm text-text-muted">Dapatkan bimbingan 1-on-1 dari ahli dan simulasi wawancara langsung bersama AI.</p>
@@ -201,7 +195,6 @@ export default function Home() {
                  <div className="w-24 h-24 mx-auto bg-surface rounded-full flex items-center justify-center border-4 border-background shadow-md mb-6 group-hover:-translate-y-2 transition-transform duration-300">
                   <Briefcase className="w-10 h-10 text-primary" />
                 </div>
-                <div className="absolute top-[45px] left-1/2 -ml-3 hidden md:block w-6 h-6 bg-background rounded-full border-2 border-primary"></div>
 
                 <h4 className="font-bold text-lg text-text-primary mb-2">4. Auto Apply</h4>
                 <p className="text-sm text-text-muted">Profil dan CV-mu disalurkan secara otomatis ke ratusan perusahaan yang cocok 90%+.</p>

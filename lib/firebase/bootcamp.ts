@@ -1,42 +1,51 @@
-import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import {
+  collection, doc, getDoc, getDocs, setDoc,
+  updateDoc, arrayUnion, serverTimestamp, orderBy, query
+} from 'firebase/firestore'
+import { db } from '../firebase'
 
 export async function getAllCourses() {
-  const snapshot = await getDocs(collection(db, "bootcamp_courses"));
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const snap = await getDocs(collection(db, 'bootcamp_courses'))
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
-export async function getCourseById(id: string) {
-  const docSnap = await getDoc(doc(db, "bootcamp_courses", id));
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
-  }
-  return null;
-}
+export async function getCourseWithDays(courseId: string) {
+  const courseSnap = await getDoc(doc(db, 'bootcamp_courses', courseId))
+  if (!courseSnap.exists()) throw new Error('Course tidak ditemukan')
 
-export async function getDayContent(courseId: string, dayNumber: number) {
-  const docSnap = await getDoc(doc(db, "bootcamp_courses", courseId, "days", dayNumber.toString()));
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
-  }
-  return null;
-}
+  const daysSnap = await getDocs(
+    query(collection(db, 'bootcamp_courses', courseId, 'days'), orderBy('dayNumber'))
+  )
+  const days = daysSnap.docs.map(d => ({ id: d.id, ...d.data() }))
 
-export async function markDayComplete(uid: string, courseId: string, dayNumber: number) {
-  const ref = doc(db, 'bootcamp_progress', uid, 'courses', courseId);
-  await setDoc(ref, {
-    completedDays: arrayUnion(dayNumber),
-    currentDay: dayNumber + 1,
-    lastUpdated: new Date()
-  }, { merge: true });
+  return { id: courseSnap.id, ...courseSnap.data(), days }
 }
 
 export async function getUserBootcampProgress(uid: string, courseId: string) {
-  const ref = doc(db, 'bootcamp_progress', uid, 'courses', courseId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    // Empty progress if none exists
-    return { completedDays: [], currentDay: 1 };
+  try {
+    const ref = doc(db, 'bootcamp_progress', uid, 'courses', courseId)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        completedDays: [], currentDay: 1,
+        startedAt: serverTimestamp()
+      })
+      return { completedDays: [], currentDay: 1 }
+    }
+    return snap.data()
+  } catch (e: any) {
+    if (e.code === 'permission-denied') return { completedDays: [], currentDay: 1 }
+    throw e
   }
-  return snap.data();
+}
+
+export async function markDayComplete(uid: string, courseId: string, dayNumber: number, totalDays: number) {
+  const ref = doc(db, 'bootcamp_progress', uid, 'courses', courseId)
+  const nextDay = dayNumber + 1
+  await updateDoc(ref, {
+    completedDays: arrayUnion(dayNumber),
+    currentDay: nextDay <= totalDays ? nextDay : dayNumber,
+    lastUpdated: serverTimestamp(),
+  })
+  return nextDay > totalDays // returns true jika semua hari selesai
 }

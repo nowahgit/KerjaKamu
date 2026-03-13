@@ -77,7 +77,7 @@ export default function CariTrainer() {
         if (data.length > 0) {
           setTrainersData(data);
         } else {
-          setTrainersData(trainers); // dummy fallback
+          setTrainersData(trainers.map(t => ({ ...t, id: t.id.toString() })));
         }
       } catch (error) {
         console.error(error);

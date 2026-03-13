@@ -4,9 +4,9 @@ import { Navbar } from "@/components/Navbar";
 import { Mic, ArrowRight, UserSquare2, ShieldAlert, SkipForward, Play, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { evaluateAnswer, calculateFinalInterviewScore, interviewQuestions } from "@/lib/interviewAI";
-import { auth, db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { evaluateAnswer, calculateFinalInterviewScore, saveInterviewResult, interviewQuestions } from "@/lib/ai/interviewAI";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 // imported from lib/interviewAI
 
@@ -15,6 +15,14 @@ export default function Wawancara() {
   const [answer, setAnswer] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUid(user?.uid || null);
+    });
+    return unsub;
+  }, []);
 
   const handleStart = () => setStep(1);
 
@@ -40,11 +48,8 @@ export default function Wawancara() {
       if (step < 5) {
         setStep(step + 1);
       } else {
-        const finalScore = calculateFinalInterviewScore(updatedFeedbacks);
         if (auth.currentUser) {
-           await updateDoc(doc(db, "users", auth.currentUser.uid), {
-             interviewScore: finalScore,
-           });
+           await saveInterviewResult(auth.currentUser.uid, updatedFeedbacks);
         }
         setStep(6);
       }

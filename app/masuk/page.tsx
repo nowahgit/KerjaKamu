@@ -21,8 +21,9 @@ export default function Masuk() {
     try {
       await loginAndRedirect(email, password, router);
     } catch (err: any) {
-      console.error(err);
+      console.log("Login failed: " + err.message);
       setError("Email atau password salah.");
+      throw err; // bubble up to be caught by handleSubmit
     }
   };
 
@@ -34,7 +35,8 @@ export default function Masuk() {
     try {
       await handleRedirect();
     } catch (err: any) {
-      console.error(err);
+      // Expected auth errors shouldn't crash via console.error in Next.js dev
+      console.log("Auth error caught in form submission:", err.message);
       setError("Email atau password salah.");
     } finally {
       setIsLoading(false);
@@ -58,7 +60,7 @@ export default function Masuk() {
       else if (role === "trainer") router.push("/trainer/dashboard");
       else router.push("/hasil");
     } catch (err: any) {
-      console.error(err);
+      console.log("Google sign in error:", err.message);
       setError("Gagal masuk dengan Google");
     } finally {
       setIsLoading(false);

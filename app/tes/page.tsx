@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clock, AlertCircle, CheckCircle2, ChevronRight, XCircle, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { updateSkillScores, createUserProfile } from "@/lib/firebase/users";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { getSkillTestQuestions } from "@/lib/firebase/skillTest";
-
-// Removed placeholder questions
+import { getSkillTestQuestions, saveSkillTestResult } from "@/lib/firebase/skillTest";
 
 const tabs = [
   { id: "excel", label: "Microsoft Excel" },
@@ -29,15 +24,19 @@ export default function Tes() {
   const [answers, setAnswers] = useState<Record<string, number[]>>({ excel: [], canva: [], english: [], digitalLiteracy: [] });
   const [questionsData, setQuestionsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    getSkillTestQuestions().then((data) => {
-      setQuestionsData(data);
-    }).catch(err => {
-      console.error(err);
-    }).finally(() => {
-      setLoading(false);
-    });
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    
+    getSkillTestQuestions()
+      .then(setQuestionsData)
+      .catch((err) => {
+        console.error(err);
+        alert('Gagal memuat soal. Coba refresh.');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -79,12 +78,12 @@ export default function Tes() {
         setSelectedOption(null);
         setIsAnswered(false);
       } else {
-        handleFinish();
+        handleFinishTest();
       }
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinishTest = async () => {
     setIsFinished(true);
 
     // Calculate scores
@@ -99,29 +98,21 @@ export default function Tes() {
       excel: calculateScore("excel"),
       canva: calculateScore("canva"),
       english: calculateScore("english"),
-      digital: calculateScore("digitalLiteracy")
+      digitalLiteracy: calculateScore("digitalLiteracy") // mapped to match the actual DB key
     };
-
-    const matchScore = Math.round((scores.excel + scores.canva + scores.english + scores.digital) / 4);
 
     try {
       if (auth.currentUser) {
-        const uid = auth.currentUser.uid;
-        await updateSkillScores(uid, scores);
-        
-        await updateDoc(doc(db, "users", uid), {
-          matchScore,
-          recommendedJob: matchScore > 80 ? "Social Media Specialist" : "Digital Marketing Assistant",
-          locationPreference: "Batam"
-        });
+        await saveSkillTestResult(auth.currentUser.uid, scores);
       }
+      setTimeout(() => {
+        router.push("/hasil");
+      }, 2000);
     } catch (err) {
-      console.error("Failed to save scores:", err);
+      console.error(err);
+      alert('Gagal menyimpan hasil. Coba lagi.');
+      setIsFinished(false);
     }
-
-    setTimeout(() => {
-      router.push("/hasil");
-    }, 2000);
   };
 
   if (isFinished) {
@@ -195,11 +186,11 @@ export default function Tes() {
             Pertanyaan {currentIdx + 1} dari {currentQuestions.length}
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-text-primary mb-8 leading-relaxed">
-            {currentQ.q}
+            {currentQ?.q}
           </h2>
 
           <div className="space-y-3">
-            {currentQ?.options?.map((opt: string, idx: number) => {
+            {currentQ?.opts?.map((opt: string, idx: number) => {
               let btnClass = "w-full text-left p-4 rounded-xl border transition-all duration-200 text-text-primary font-medium flex items-center justify-between ";
               if (!isAnswered) {
                 btnClass += "border-border-color hover:border-primary hover:bg-primary/5 bg-surface";

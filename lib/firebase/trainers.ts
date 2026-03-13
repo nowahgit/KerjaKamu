@@ -1,49 +1,47 @@
-import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, query, where, updateDoc, addDoc } from "firebase/firestore";
+import {
+  collection, doc, getDoc, getDocs,
+  query, where, serverTimestamp, addDoc, orderBy
+} from 'firebase/firestore'
+import { db } from '../firebase'
 
-export async function getAllVerifiedTrainers() {
-  const q = query(collection(db, "trainers"), where("status", "==", "verified"));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+export async function getTrainerWithStudents(trainerUid: string) {
+  const trainerSnap = await getDoc(doc(db, 'trainers', trainerUid))
+  if (!trainerSnap.exists()) return null
+  const trainer = { id: trainerSnap.id, ...trainerSnap.data() } as any
+
+  // Ambil data tiap student dari collection users
+  const q = query(collection(db, 'users'), where('trainerId', '==', trainerUid))
+  const snap = await getDocs(q)
+  
+  trainer.studentsData = snap.docs.map(d => ({ userId: d.id, ...d.data() }))
+  return trainer
 }
 
-export async function getTrainerById(uid: string) {
-  const docSnap = await getDoc(doc(db, "trainers", uid));
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
-  }
-  return null;
-}
-
-export async function getTrainerStudents(trainerUid: string): Promise<any[]> {
-  const q = query(collection(db, "sessions"), where("trainerId", "==", trainerUid));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-export async function submitTrainerApplication(uid: string, data: any, skckFileMetadata?: any) {
-  await setDoc(doc(db, "trainer_applications", uid), {
-    ...data,
-    skckData: skckFileMetadata,
-    status: "pending",
-    submittedAt: new Date().toISOString()
-  });
+export async function getTrainerStudents(trainerUid: string) {
+  const q = query(collection(db, 'users'), where('trainerId', '==', trainerUid))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => ({ userId: d.id, ...d.data() }))
 }
 
 export async function getTrainerSessions(trainerUid: string) {
-  const q = query(collection(db, "sessions"), where("trainerId", "==", trainerUid));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const snap = await getDocs(
+    query(collection(db, 'sessions'),
+      where('trainerId', '==', trainerUid),
+      orderBy('scheduledAt', 'desc')
+    )
+  )
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
 export async function createSession(sessionData: any) {
-  await addDoc(collection(db, "sessions"), {
-    ...sessionData,
-    status: "pending",
-    createdAt: new Date().toISOString()
-  });
+  return await addDoc(collection(db, 'sessions'), {
+    ...sessionData, createdAt: serverTimestamp()
+  })
 }
 
-export async function updateSessionStatus(sessionId: string, status: string) {
-  await updateDoc(doc(db, "sessions", sessionId), { status, updatedAt: new Date().toISOString() });
+export async function getAllVerifiedTrainers() {
+  const snap = await getDocs(
+    query(collection(db, 'trainers'), where('status', '==', 'verified'))
+  )
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }

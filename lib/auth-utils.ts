@@ -1,6 +1,6 @@
 
 import { db } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export type UserRole = "user" | "trainer" | "admin";
 
@@ -26,10 +26,27 @@ export async function createUserProfile(uid: string, data: {
   location?: string;
 }) {
   try {
-    await setDoc(doc(db, "users", uid), {
-      ...data,
-      createdAt: new Date().toISOString(),
-    });
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
+    
+    // Only create if doesn't exist (important for Google Sign In)
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        name: data.displayName || "Pengguna",
+        email: data.email,
+        role: data.role,
+        location: data.location || "Indonesia",
+        skillScores: null,
+        matchScore: null,
+        recommendedJob: null,
+        bootcampProgress: {},
+        interviewScore: null,
+        certificates: [],
+        appliedJobs: [],
+        trainerId: null,
+        createdAt: serverTimestamp()
+      });
+    }
   } catch (error) {
     console.error("Error creating user profile:", error);
   }

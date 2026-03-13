@@ -1,31 +1,25 @@
 "use client";
 
 import { Navbar } from "@/components/Navbar";
-import { CheckCircle2, Lock, PlayCircle, BookOpen, Download, AlertCircle } from "lucide-react";
+import { CheckCircle2, Lock, PlayCircle, BookOpen, Download, AlertCircle, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { getAllCourses, getUserBootcampProgress, markDayComplete } from "@/lib/firebase/bootcamp";
-import { generateAndSaveCertificate } from "@/lib/certificates/generate";
+import { getAllCourses, getCourseWithDays, getUserBootcampProgress, markDayComplete } from "@/lib/firebase/bootcamp";
+import { generateCertificate } from "@/lib/certificates/generate";
 import { useToast } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/Toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-const defaultDays = [
-  { id: 1, title: "Pengenalan UI/UX Dasar", status: "locked", duration: "15 min" },
-  { id: 2, title: "Tools Canva & Layouting", status: "locked", duration: "20 min" },
-  { id: 3, title: "Social Media Analytics", status: "locked", duration: "18 min" },
-  { id: 4, title: "Copywriting Engagement", status: "locked", duration: "15 min" },
-  { id: 5, title: "Memahami Algoritma", status: "locked", duration: "22 min" },
-  { id: 6, title: "Content Calendar Planning", status: "locked", duration: "18 min" },
-  { id: 7, title: "Final Project & Sertifikasi", status: "locked", duration: "30 min" },
-];
+const defaultDays: any[] = [];
 
 export default function Bootcamp() {
   const [activeDay, setActiveDay] = useState(1);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizScore, setQuizScore] = useState<number | null>(null);
+  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [uid, setUid] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState<string | null>(null);
   const [daysState, setDaysState] = useState(defaultDays);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingCert, setIsGeneratingCert] = useState(false);
@@ -38,29 +32,40 @@ export default function Bootcamp() {
       if (user) {
         setUid(user.uid);
         try {
-          // In real app, we'd getAllCourses first or parallel
           const courses = await getAllCourses();
-          const progress = await getUserBootcampProgress(user.uid, COURSE_ID);
+          if (courses.length === 0) {
+            setIsLoading(false);
+            return;
+          }
+          
+          const activeCourse = courses[0];
+          setCourseId(activeCourse.id);
+          const courseData = await getCourseWithDays(activeCourse.id);
+          const days = courseData.days;
+          const progress = await getUserBootcampProgress(user.uid, activeCourse.id);
+          
+          // Re-ensure sorting as requested
+          const sortedDays = days.sort((a: any, b: any) => a.dayNumber - b.dayNumber);
           
           let lastUnlockedDay = 1;
-          const updatedDays = defaultDays.map(day => {
-            const isCompleted = progress?.completedDays?.[day.id];
+          const updatedDays = sortedDays.map((day: any) => {
+            const isCompleted = progress?.completedDays?.includes(day.dayNumber);
             if (isCompleted) {
-              lastUnlockedDay = Math.max(lastUnlockedDay, day.id + 1);
+              lastUnlockedDay = Math.max(lastUnlockedDay, day.dayNumber + 1);
               return { ...day, status: "done" };
             }
             return day;
           });
 
           // Set the "current" active day
-          const finalDays = updatedDays.map(day => {
-            if (day.id === lastUnlockedDay) return { ...day, status: "current" };
-            if (day.id > lastUnlockedDay) return { ...day, status: "locked" };
+          const finalDays = updatedDays.map((day: any) => {
+            if (day.dayNumber === lastUnlockedDay) return { ...day, status: "current" };
+            if (day.dayNumber > lastUnlockedDay) return { ...day, status: "locked" };
             return day;
           });
 
           setDaysState(finalDays);
-          setActiveDay(Math.min(lastUnlockedDay, 7));
+          setActiveDay(Math.min(lastUnlockedDay, sortedDays.length));
         } catch (error) {
           console.error("Bootcamp load error:", error);
           toast.error("Gagal memuat progres kelas.");
@@ -76,11 +81,21 @@ export default function Bootcamp() {
   };
 
   const handleQuizSubmit = async () => {
-    setQuizScore(100);
-    if (uid) {
+    const dayData = daysState[activeDay - 1];
+    if (!dayData?.quiz) return;
+
+    let correctCount = 0;
+    dayData.quiz.forEach((q: any, i: number) => {
+      if (selectedAnswers[i] === q.correctIndex) correctCount++;
+    });
+
+    const score = Math.round((correctCount / dayData.quiz.length) * 100);
+    setQuizScore(score);
+
+    if (score >= 70 && uid) {
       try {
-        await markDayComplete(uid, COURSE_ID, activeDay);
-        toast.success(`Hari ${activeDay} selesai! 🎉`);
+        await markDayComplete(uid, courseId || COURSE_ID, activeDay, daysState.length);
+        toast.success(`Hari ${activeDay} selesai!`);
         
         // Update local state to unlock next day
         setDaysState(prev => prev.map(d => {
@@ -90,7 +105,7 @@ export default function Bootcamp() {
         }));
         
         if (activeDay < 7) {
-          setActiveDay(activeDay + 1);
+          // setActiveDay(activeDay + 1); // This will be handled by the "Lanjut ke Day X" button
         }
       } catch (error) {
         toast.error("Gagal menyimpan progres.");
@@ -98,16 +113,17 @@ export default function Bootcamp() {
     }
   };
 
-  const isCompletedCourse = daysState[6].status === "done";
+  const isCompletedCourse = daysState.length > 0 && daysState[daysState.length - 1]?.status === "done";
 
   const handleGenerateCert = async () => {
     if (!auth.currentUser) return;
     setIsGeneratingCert(true);
     try {
       toast.success("Sedang membuat sertifikat...");
-      await generateAndSaveCertificate(
-        "Canva untuk Marketing Digital",
-        auth.currentUser.displayName || "Peserta"
+      await generateCertificate(
+        auth.currentUser.uid,
+        auth.currentUser.displayName || "Peserta",
+        "Canva untuk Marketing Digital"
       );
       toast.success("Sertifikat berhasil diunduh dan disimpan!");
     } catch (error) {
@@ -162,7 +178,7 @@ export default function Bootcamp() {
 
                   return (
                     <button 
-                      key={day.id}
+                      key={day.dayNumber || day.id}
                       onClick={() => day.status !== "locked" && setActiveDay(day.id)}
                       disabled={day.status === "locked"}
                       className={btnClass}
@@ -174,7 +190,7 @@ export default function Bootcamp() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className={`font-bold text-sm truncate ${day.status === "current" ? "text-white" : ""}`}>
-                          Day {day.id}: {day.title}
+                          Day {day.dayNumber || day.id}: {day.title}
                         </div>
                         <div className={`text-xs ${day.status === "current" ? "text-white/80" : "text-text-muted"}`}>
                           {day.duration}
@@ -221,25 +237,14 @@ export default function Bootcamp() {
               <div className="p-6 md:p-10 flex-1">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="bg-accent/10 text-accent font-bold text-xs px-2.5 py-1 rounded uppercase tracking-wider">Social Media</span>
-                  <span className="bg-surface text-text-muted font-bold text-xs px-2.5 py-1 rounded max-w-fit">Day {activeDay}</span>
+                  <span className="bg-surface text-text-muted font-bold text-xs px-2.5 py-1 rounded max-w-fit">Day {daysState[activeDay - 1]?.dayNumber || activeDay}</span>
                 </div>
                 
                 <h1 className="text-2xl md:text-3xl font-extrabold text-text-primary mb-6">{daysState[activeDay - 1]?.title || "Materi Pembelajaran"}</h1>
                 
                 <div className="prose prose-zinc max-w-none text-text-primary mb-12">
-                  <p>
-                    Dalam sesi ini, kita akan mempelajari cara membaca analitik bawaan (insights) di platform seperti Instagram, TikTok, dan LinkedIn. Mengerti data adalah kunci untuk membuat konten yang lebih baik di hari-hari selanjutnya.
-                  </p>
-                  <h3>Apa yang akan kita pelajari:</h3>
-                  <ul>
-                    <li>Pengertian Reach, Impressions, dan Engagement Rate.</li>
-                    <li>Cara menghitung Engagement Rate sesungguhnya.</li>
-                    <li>Menganalisis waktu posting terbaik berdasarkan demografi follower.</li>
-                    <li>Merencanakan iterasi konten Canva dari data insight.</li>
-                  </ul>
-                  
-                  <div className="bg-primary/5 border border-primary/20 p-5 rounded-xl my-8 text-primary-dark">
-                    <strong>Pro Tip:</strong> Jangan hanya fokus pada 'Likes'. 'Saves' dan 'Shares' adalah indikator utama bahwa konten Canva kamu memiliki retensi dan nilai yang riil di mata algoritma.
+                  <div className="whitespace-pre-wrap">
+                    {daysState[activeDay - 1]?.content || "Memuat materi..."}
                   </div>
                 </div>
 
@@ -247,44 +252,66 @@ export default function Bootcamp() {
                 {showQuiz ? (
                   <div className="bg-surface border border-border-color rounded-2xl p-6 md:p-8 mt-12 mb-6 animate-fade-in">
                     <h3 className="font-bold text-lg text-text-primary flex items-center gap-2 mb-6">
-                      <BookOpen className="text-primary" /> Kuis Harian: Day {activeDay}
+                      <BookOpen className="text-primary" /> Kuis Harian: Day {daysState[activeDay - 1]?.dayNumber || activeDay}
                     </h3>
                     
                     {quizScore === null ? (
-                      <div className="space-y-6">
-                        <div className="bg-card p-5 rounded-xl border border-border-color shadow-sm">
-                          <p className="font-bold text-text-primary mb-4">
-                            Metrik mana yang paling penting untuk mengukur "Bermanfaat atau tidaknya" sebuah konten edukasi?
-                          </p>
-                          <div className="space-y-3">
-                            {["Jumlah Likes", "Jumlah Saves/Shares", "Jumlah Views", "Jumlah Comment"].map((opt, i) => (
-                              <button key={i} className="w-full text-left px-5 py-3 rounded-lg border border-border-color hover:border-primary hover:bg-primary/5 text-sm font-medium transition-colors bg-background text-text-primary">
-                                {String.fromCharCode(65 + i)}. {opt}
-                              </button>
-                            ))}
+                      <div className="space-y-8">
+                        {daysState[activeDay - 1]?.quiz?.map((q: any, qi: number) => (
+                          <div key={qi} className="bg-card p-5 rounded-xl border border-border-color shadow-sm">
+                            <p className="font-bold text-text-primary mb-4">
+                              {qi + 1}. {q.question}
+                            </p>
+                            <div className="space-y-3">
+                              {q.options.map((opt: string, i: number) => (
+                                <button 
+                                  key={i} 
+                                  onClick={() => {
+                                    const next = [...selectedAnswers];
+                                    next[qi] = i;
+                                    setSelectedAnswers(next);
+                                  }}
+                                  className={`w-full text-left px-5 py-3 rounded-lg border transition-colors text-sm font-medium ${selectedAnswers[qi] === i ? 'border-primary bg-primary/10 text-primary' : 'border-border-color bg-background text-text-primary hover:border-primary/50'}`}
+                                >
+                                  {String.fromCharCode(65 + i)}. {opt}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        ))}
                         <button 
                           onClick={handleQuizSubmit}
-                          className="w-full bg-primary text-white py-3.5 rounded-xl font-bold btn-hover"
+                          disabled={selectedAnswers.length < (daysState[activeDay - 1]?.quiz?.length || 0)}
+                          className="w-full bg-primary text-white py-3.5 rounded-xl font-bold btn-hover disabled:opacity-50"
                         >
                           Submit Jawaban
                         </button>
                       </div>
-                    ) : (
+                    ) : quizScore >= 70 ? (
                       <div className="bg-success/5 border border-success/30 p-6 rounded-xl flex items-start gap-4">
                          <CheckCircle2 className="text-success h-8 w-8 shrink-0 mt-1" />
                          <div>
-                           <h4 className="font-bold text-lg text-success mb-2">Jawaban Benar! Skor 100</h4>
-                            <p className="text-sm text-text-muted mb-4 leading-relaxed">Saves menunjukkan audiens ingin kembali melihat konten, sementara Shares memperluas jangkauan organik. Ini esensial untuk konten Canva edukatif.</p>
-                           {activeDay < 7 ? (
-                             <button onClick={() => { setShowQuiz(false); setQuizScore(null); }} className="bg-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm btn-hover inline-flex items-center gap-2">
-                               Lanjut ke Day {activeDay + 1}
-                             </button>
-                           ) : (
-                             <div className="font-bold text-success text-sm flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/> Bootcamp Selesai!</div>
-                           )}
-                           </div>
+                            <h4 className="font-bold text-lg text-success mb-2">Lulus! Skor {quizScore}</h4>
+                            <p className="text-sm text-text-muted mb-4 leading-relaxed">Selamat! Kamu memahami materi hari ini dengan sangat baik. Lanjutkan ke hari berikutnya.</p>
+                            {activeDay < 7 ? (
+                              <button onClick={() => { setShowQuiz(false); setQuizScore(null); setSelectedAnswers([]); setActiveDay(activeDay + 1); }} className="bg-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm btn-hover inline-flex items-center gap-2">
+                                Lanjut ke Day {activeDay + 1}
+                              </button>
+                            ) : (
+                              <div className="font-bold text-success text-sm flex items-center gap-2"><CheckCircle2 className="w-5 h-5"/> Bootcamp Selesai!</div>
+                            )}
+                         </div>
+                      </div>
+                    ) : (
+                      <div className="bg-error/5 border border-error/30 p-6 rounded-xl flex items-start gap-4">
+                         <AlertTriangle className="text-error h-8 w-8 shrink-0 mt-1" />
+                         <div>
+                            <h4 className="font-bold text-lg text-error mb-2">Belum Lulus (Skor {quizScore})</h4>
+                            <p className="text-sm text-text-muted mb-4 leading-relaxed">Minimal skor untuk lulus adalah 70. Silakan baca kembali materi dan coba lagi.</p>
+                            <button onClick={() => { setQuizScore(null); setSelectedAnswers([]); }} className="bg-error text-white px-6 py-2.5 rounded-lg font-bold text-sm btn-hover inline-flex items-center gap-2">
+                              Coba Lagi
+                            </button>
+                         </div>
                       </div>
                     )}
                   </div>

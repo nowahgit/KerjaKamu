@@ -2,13 +2,38 @@
 
 import { Users, UserSquare2, Briefcase, FileText, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { getAnalyticsSummary, getPendingTrainers } from "@/lib/firebase/admin";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function AdminOverview() {
-  const stats = [
-    { label: "Total User", value: "14,024", trend: "+12%", icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Trainer Aktif", value: "342", trend: "+5%", icon: UserSquare2, color: "text-success", bg: "bg-success/10" },
-    { label: "Lowongan Aktif", value: "8,950", trend: "+24%", icon: Briefcase, color: "text-accent", bg: "bg-accent/10" },
-    { label: "Aplikasi Masuk", value: "124.5K", trend: "+102%", icon: FileText, color: "text-warning", bg: "bg-warning/10" }
+  const [stats, setStats] = useState<any>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [analytics, pending] = await Promise.all([
+          getAnalyticsSummary(),
+          getPendingTrainers()
+        ]);
+        setStats(analytics);
+        setPendingCount(pending.length);
+      } catch (error) {
+        console.error("Admin fetch error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const statsConfig = [
+    { label: "Total User", key: "totalUsers", icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Trainer Aktif", key: "totalTrainers", icon: UserSquare2, color: "text-success", bg: "bg-success/10" },
+    { label: "Lowongan Aktif", key: "totalJobs", icon: Briefcase, color: "text-accent", bg: "bg-accent/10" },
+    { label: "Aplikasi Masuk", key: "totalApplications", icon: FileText, color: "text-warning", bg: "bg-warning/10" }
   ];
 
   return (
@@ -22,22 +47,35 @@ export default function AdminOverview() {
           href="/admin/trainer-verification" 
           className="bg-warning text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-warning/20 hover:brightness-110 flex items-center gap-2"
         >
-          <span className="bg-white/20 px-2 py-0.5 rounded text-xs">3</span> Verifikasi Tertunda
+          {isLoading ? (
+            <Skeleton className="h-4 w-4 bg-white/20" />
+          ) : (
+            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">{pendingCount}</span>
+          )} 
+          Verifikasi Tertunda
         </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {stats.map((s, i) => (
+        {statsConfig.map((s, i) => (
           <div key={i} className="bg-card border border-border-color rounded-2xl p-6 shadow-sm hover-card">
             <div className="flex justify-between items-start mb-4">
                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.bg}`}>
                  <s.icon className={s.color} size={24} />
                </div>
-               <span className="text-xs font-bold text-success flex items-center gap-1 bg-success/10 px-2 py-1 rounded">
-                 {s.trend} <ArrowUpRight size={14} />
-               </span>
+               {!isLoading && (
+                 <span className="text-xs font-bold text-success flex items-center gap-1 bg-success/10 px-2 py-1 rounded">
+                   +12% <ArrowUpRight size={14} />
+                 </span>
+               )}
             </div>
-            <div className="font-mono text-3xl font-bold text-text-primary mb-1">{s.value}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24 mb-1" />
+            ) : (
+              <div className="font-mono text-3xl font-bold text-text-primary mb-1">
+                {stats?.[s.key as keyof typeof stats]?.toLocaleString() || "0"}
+              </div>
+            )}
             <div className="text-sm font-bold text-text-muted uppercase tracking-wider">{s.label}</div>
           </div>
         ))}

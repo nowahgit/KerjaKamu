@@ -1,7 +1,7 @@
 "use client";
 
 import { Navbar } from "@/components/Navbar";
-import { TrendingUp, Award, Clock, ArrowRight, Download, BookOpen, UserCircle, Briefcase, MapPin, CheckCircle2, AlertTriangle, MonitorPlay, Trophy } from "lucide-react";
+import { TrendingUp, Award, Clock, ArrowRight, Download, BookOpen, UserCircle, Briefcase, MapPin, CheckCircle2, AlertTriangle, MonitorPlay, Trophy, FileText } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
@@ -16,6 +16,7 @@ export default function Hasil() {
   const [profile, setProfile] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [bootcampProgress, setBootcampProgress] = useState<any>(null);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -28,10 +29,19 @@ export default function Hasil() {
           const userProfile = await getUserProfile(user.uid);
           setProfile(userProfile);
           
-          if (userProfile) {
-            const fetchedJobs = await getMatchingJobs(user.uid);
-            setJobs(fetchedJobs);
-          }
+            if (userProfile) {
+              const fetchedJobs = await getMatchingJobs(user.uid);
+              setJobs(fetchedJobs);
+
+              // Fetch bootcamp progress for "Canva" course as default example
+              try {
+                const { getUserBootcampProgress } = await import("@/lib/firebase/bootcamp");
+                const progress = await getUserBootcampProgress(user.uid, "canva-marketing-digital"); // Slug from seed or constant
+                setBootcampProgress(progress);
+              } catch (e) {
+                // Silently fail if no progress
+              }
+            }
         } catch (error) {
           console.error("Error fetching data", error);
         } finally {
@@ -76,6 +86,19 @@ export default function Hasil() {
                   </div>
                 </div>
               </div>
+            ) : profile?.skillScores === null ? (
+              <div className="bg-warning/5 border border-warning/20 rounded-2xl p-10 text-center shadow-sm">
+                <div className="w-20 h-20 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertTriangle size={40} className="text-warning" />
+                </div>
+                <h2 className="text-2xl font-bold text-text-primary mb-3">Analisis Belum Tersedia</h2>
+                <p className="text-text-muted mb-8 max-w-md mx-auto">
+                  Kamu belum melakukan Tes Keterampilan AI. Selesaikan tes selama 5 menit untuk mendapatkan Match Score dan rekomendasi lowongan kerja.
+                </p>
+                <Link href="/tes" className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-xl font-bold btn-hover shadow-lg shadow-primary/20">
+                  Mulai Tes Sekarang <ArrowRight size={20} />
+                </Link>
+              </div>
             ) : (
             <div className="bg-card border border-border-color rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-full -z-10"></div>
@@ -86,7 +109,7 @@ export default function Hasil() {
                   {mounted && (
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                       <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" className="text-surface" />
-                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 * (1 - 0.89)} className="text-primary transition-all duration-1000 ease-out" style={{ strokeDashoffset: mounted ? 282.7 * (1 - 0.89) : 282.7 }} />
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray="282.7" strokeDashoffset={282.7 * (1 - (profile?.matchScore || 0) / 100)} className="text-primary transition-all duration-1000 ease-out" />
                     </svg>
                   )}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -102,8 +125,7 @@ export default function Hasil() {
                   <h2 className="text-2xl font-bold text-text-primary mb-2">{profile?.recommendedJob || "Belum Ada Data"}</h2>
                   
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-text-muted mb-4">
-                    <span className="flex items-center gap-1"><Briefcase size={16} /> Gaji: Rp5.5Jt - 7Jt</span>
-                    <span className="flex items-center gap-1"><MapPin size={16} /> Batam (Rekomendasi)</span>
+                    <span className="flex items-center gap-1"><Briefcase size={16} /> Gaji Efektif: Rp4.9Jt (Batam)</span>
                   </div>
 
                   <p className="text-sm text-text-muted leading-relaxed">
@@ -124,15 +146,15 @@ export default function Hasil() {
                 <div className="space-y-5">
                   {[
                     { name: "Microsoft Excel", id: "excel", val: profile?.skillScores?.excel || 0, color: "bg-success", text: "text-success", icon: <CheckCircle2 className="w-4 h-4" /> },
-                    { name: "Bahasa Inggris", id: "english", val: profile?.skillScores?.english || 0, color: "bg-success", text: "text-success", icon: <CheckCircle2 className="w-4 h-4" /> },
-                    { name: "Canva Design", id: "canva", val: profile?.skillScores?.canva || 0, color: "bg-warning", text: "text-warning", icon: <AlertTriangle className="w-4 h-4" /> },
-                    { name: "Literasi Digital", id: "digital", val: profile?.skillScores?.digital || 0, color: "bg-primary", text: "text-primary", icon: <CheckCircle2 className="w-4 h-4" /> }
+                    { name: "Bahasa Inggris", id: "english", val: profile?.skillScores?.english || 1, color: "bg-success", text: "text-success", icon: <CheckCircle2 className="w-4 h-4" /> },
+                    { name: "Canva Design", id: "canva", val: profile?.skillScores?.canva || 1, color: "bg-warning", text: "text-warning", icon: <AlertTriangle className="w-4 h-4" /> },
+                    { name: "Literasi Digital", id: "digitalLiteracy", val: profile?.skillScores?.digitalLiteracy || 1, color: "bg-primary", text: "text-primary", icon: <CheckCircle2 className="w-4 h-4" /> }
 
                   ].map((s, i) => (
                     <div key={i}>
                       <div className="flex justify-between text-sm mb-1.5 font-medium">
                         <span className="text-text-primary">{s.name}</span>
-                        <span className={`font-mono ${s.text}`}>{s.val}% {s.icon}</span>
+                        <span className={`font-mono ${s.text}`}>{s.val}% {profile?.skillScores ? s.icon : ''}</span>
                       </div>
                       <div className="h-2.5 w-full bg-surface rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${s.color} transition-all duration-1000`} style={{ width: mounted ? `${s.val}%` : '0%' }}></div>
@@ -303,8 +325,12 @@ export default function Hasil() {
                     <MonitorPlay size={20} />
                   </div>
                   <div>
-                    <div className="font-bold text-text-primary text-sm mb-0.5 group-hover:text-primary transition-colors">Lanjutkan Bootcamp</div>
-                    <div className="text-xs text-text-muted">Day 3: Social Media Analytics</div>
+                    <div className="font-bold text-text-primary text-sm mb-0.5 group-hover:text-primary transition-colors">
+                      {bootcampProgress && bootcampProgress.completedDays?.length > 0 ? "Lanjutkan Bootcamp" : "Mulai Bootcamp"}
+                    </div>
+                    <div className="text-xs text-text-muted">
+                      {bootcampProgress ? `Day ${bootcampProgress.currentDay || 1}: ${bootcampProgress.currentDay === 1 ? 'Mengenal Tools' : 'Materi Selanjutnya'}` : 'Tingkatkan skill desainmu'}
+                    </div>
                   </div>
                   <ArrowRight size={16} className="ml-auto text-text-muted" />
                 </Link>
@@ -334,23 +360,59 @@ export default function Hasil() {
             </div>
 
             {/* CERTIFICATE (LOCKED) */}
-            <div className="bg-surface border border-border-color rounded-2xl p-6 text-center shadow-inner relative overflow-hidden group">
-              <div className="absolute inset-0 bg-card/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 opacity-100 transition-opacity">
-                <div className="w-12 h-12 bg-background rounded-full flex items-center justify-center shadow-md mb-3 border border-border-color">
-                  <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+            {profile?.certificates && profile.certificates.length > 0 ? (
+              <div className="bg-card border border-primary/20 rounded-2xl p-6 shadow-sm overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-2">
+                   <div className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded italic">TERVERIFIKASI</div>
                 </div>
-                <h4 className="font-bold text-text-primary text-sm">Sertifikat Terkunci</h4>
-                <p className="text-xs text-text-muted mt-1">Selesaikan Bootcamp 7 Hari untuk mengunduh</p>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                    <Award size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-text-primary text-sm">Sertifikat Tersedia</h4>
+                    <p className="text-xs text-text-muted">{profile.certificates.length} Sertifikat Aktif</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {profile.certificates.map((cert: any, idx: number) => (
+                    <a 
+                      key={idx} 
+                      href={cert.pdfUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 bg-surface rounded-xl border border-border-color hover:border-primary transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded bg-background flex items-center justify-center text-primary">
+                           <FileText size={16} />
+                         </div>
+                         <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">{cert.title}</div>
+                      </div>
+                      <Download size={14} className="text-text-muted group-hover:text-primary" />
+                    </a>
+                  ))}
+                </div>
               </div>
-              
-              <div className="opacity-50 blur-sm pointer-events-none">
-                <div className="w-16 h-16 mx-auto bg-primary/20 rounded mb-4 flex items-center justify-center"><Award className="text-primary h-8 w-8"/></div>
-                <div className="h-4 w-3/4 mx-auto bg-border-color rounded mb-2"></div>
-                <div className="h-3 w-1/2 mx-auto bg-border-color rounded"></div>
+            ) : (
+              <div className="bg-surface border border-border-color rounded-2xl p-6 text-center shadow-inner relative overflow-hidden group">
+                <div className="absolute inset-0 bg-card/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 opacity-100 transition-opacity">
+                  <div className="w-12 h-12 bg-background rounded-full flex items-center justify-center shadow-md mb-3 border border-border-color">
+                    <svg className="w-6 h-6 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h4 className="font-bold text-text-primary text-sm">Sertifikat Terkunci</h4>
+                  <p className="text-xs text-text-muted mt-1">Selesaikan Bootcamp 7 Hari untuk mengunduh</p>
+                </div>
+                
+                <div className="opacity-50 blur-sm pointer-events-none">
+                  <div className="w-16 h-16 mx-auto bg-primary/20 rounded mb-4 flex items-center justify-center"><Award className="text-primary h-8 w-8"/></div>
+                  <div className="h-4 w-3/4 mx-auto bg-border-color rounded mb-2"></div>
+                  <div className="h-3 w-1/2 mx-auto bg-border-color rounded"></div>
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>

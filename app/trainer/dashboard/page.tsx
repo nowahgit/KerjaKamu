@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function TrainerDashboard() {
   const [sessions, setSessions] = useState<any[]>([]);
-  const [studentCount, setStudentCount] = useState(0);
+  const [students, setStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [trainerName, setTrainerName] = useState("Trainer");
 
@@ -20,10 +20,8 @@ export default function TrainerDashboard() {
       if (user) {
         setTrainerName(user.displayName?.split(" ")[0] || "Trainer");
         try {
-          const students = await getTrainerStudents(user.uid);
-          // Simple unique student count parsing
-          const uniqueIds = new Set(students.map(s => s.userId));
-          setStudentCount(uniqueIds.size);
+          const fetchedStudents = await getTrainerStudents(user.uid);
+          setStudents(fetchedStudents);
         } catch (error) {
           console.error("Error fetching students", error);
         }
@@ -45,7 +43,7 @@ export default function TrainerDashboard() {
   }, []);
 
   const stats = [
-    { label: "Total Murid", value: studentCount.toString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Total Murid", value: students.length.toString(), icon: Users, color: "text-primary", bg: "bg-primary/10" },
     { label: "Sesi Minggu Ini", value: sessions.length.toString(), icon: CalendarRange, color: "text-accent", bg: "bg-accent/10" },
     { label: "Rating Rata-rata", value: "4.9", icon: Star, color: "text-warning", bg: "bg-warning/10" },
     { label: "Estimasi Honor", value: "Rp" + (sessions.length * 150) + "Rb", icon: Wallet, color: "text-success", bg: "bg-success/10" }
@@ -54,7 +52,7 @@ export default function TrainerDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-text-primary">Selamat datang, {trainerName}! 👋</h1>
+        <h1 className="text-3xl font-extrabold text-text-primary">Selamat datang, {trainerName}!</h1>
         <p className="text-text-muted mt-1">Ini ringkasan aktivitas mengajar Anda hari ini.</p>
       </div>
 
@@ -128,29 +126,32 @@ export default function TrainerDashboard() {
              <h3 className="font-bold text-error flex items-center gap-2"><AlertTriangle className="w-5 h-5"/> Murid Butuh Bantuan</h3>
            </div>
            
-           <div className="p-6 space-y-6 flex-1">
-              <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface shrink-0 flex items-center justify-center font-bold text-text-primary border border-border-color shadow-sm">
-                    RK
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-text-primary mb-0.5">Rendi Kurniawan</div>
-                    <div className="text-xs text-error font-medium mb-1">Gagal Kuis Day 4 (2x)</div>
-                    <div className="text-xs text-text-muted mb-3">Kesulitan di materi Layouting Canva.</div>
-                    <button className="text-xs font-bold text-primary hover:underline">Kirim Pesan Dukungan</button>
-                  </div>
-              </div>
-              <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface shrink-0 flex items-center justify-center font-bold text-text-primary border border-border-color shadow-sm">
-                    DA
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-text-primary mb-0.5">Dewi Anggraini</div>
-                    <div className="text-xs text-warning font-medium mb-1">Tidak aktif 3 hari</div>
-                    <div className="text-xs text-text-muted mb-3">Tersendat di Day 2 Bootcamp.</div>
-                    <button className="text-xs font-bold text-primary hover:underline">Ingatkan Jadwal</button>
-                  </div>
-              </div>
+           <div className="p-6 space-y-6 flex-1 max-h-[400px] overflow-y-auto hide-scrollbar">
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : students.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-xs text-text-muted">Belum ada murid yang terhubung.</p>
+                </div>
+              ) : students.map((s, i) => (
+                <div key={i} className="flex gap-4 p-2 hover:bg-surface rounded-lg transition-colors group">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 shrink-0 flex items-center justify-center font-bold text-primary border border-primary/20 shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                      {s.name ? s.name.split(" ").map((n: string) => n[0]).join("") : "U"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-text-primary mb-0.5 truncate">{s.name || "Seseorang"}</div>
+                      <div className="text-xs text-text-muted flex items-center gap-1">
+                        Match: <span className="text-success font-bold font-mono">{s.matchScore || 0}%</span>
+                      </div>
+                      <div className="text-[10px] text-text-muted mt-1 italic">
+                        {s.recommendedJob || "Belum ada rekomendasi"}
+                      </div>
+                    </div>
+                </div>
+              ))}
            </div>
         </div>
       </div>

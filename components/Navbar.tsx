@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 import { clearAuthCookies } from "@/lib/auth-utils";
+import { getUserProfile } from "@/lib/firebase/users";
 import { useRouter } from "next/navigation";
 
 export function Navbar() {
@@ -14,10 +15,17 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        const p = await getUserProfile(u.uid);
+        setProfile(p);
+      } else {
+        setProfile(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -31,6 +39,13 @@ export function Navbar() {
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  const getDashboardLink = () => {
+    if (!profile) return "/hasil";
+    if (profile.role === "admin") return "/admin";
+    if (profile.role === "trainer") return "/trainer/dashboard";
+    return "/hasil";
   };
 
   return (
@@ -80,7 +95,7 @@ export function Navbar() {
               {user ? (
                 <>
                   <Link
-                    href="/hasil"
+                    href={getDashboardLink()}
                     className="text-sm font-medium text-text-muted hover:text-text-primary transition-colors px-2 py-2 flex items-center gap-1.5"
                   >
                     <User size={18} /> Dashboard
@@ -139,7 +154,7 @@ export function Navbar() {
               {user ? (
                 <>
                   <Link
-                    href="/hasil"
+                    href={getDashboardLink()}
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-bold text-text-primary bg-surface border border-border-color"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >

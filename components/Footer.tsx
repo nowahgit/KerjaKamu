@@ -49,7 +49,7 @@ export function Footer() {
         </div>
       </div>
       <div className="mt-12 pt-8 border-t border-border-color max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center text-sm text-text-muted">
-        <p>© 2026 KerjaKamu. PIDI Hackathon Submission. Dibangun oleh MejaLuar.</p>
+        <p>© 2026 KerjaKamu - MejaLuar.</p>
         <p className="mt-2 md:mt-0 font-mono text-xs">V0.1.0-BETA</p>
       </div>
     </footer>

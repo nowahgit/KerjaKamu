@@ -1,14 +1,11 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 
 export async function getSkillTestQuestions() {
   const snap = await getDoc(doc(db, 'skill_test_questions', 'v1'))
-  if (!snap.exists()) throw new Error('Soal belum tersedia')
+  if (!snap.exists()) throw new Error('Soal belum tersedia di database')
   const data = snap.data()
-
-  // Ambil 5 soal random per kategori
-  const shuffle = (arr: any[]) => arr.sort(() => Math.random() - 0.5).slice(0, 5)
-
+  const shuffle = (arr: any[]) => [...arr].sort(() => Math.random() - 0.5).slice(0, 5)
   return {
     excel: shuffle(data.excel),
     canva: shuffle(data.canva),
@@ -17,17 +14,26 @@ export async function getSkillTestQuestions() {
   }
 }
 
-export function calculateSkillScores(answers: any, correctAnswers: any) {
-  const scores: Record<string, number> = {}
-  Object.entries(answers).forEach(([skill, userAnswers]) => {
-    const arr = userAnswers as number[]
-    const correctArr = correctAnswers[skill]
-    if (arr && correctArr && Array.isArray(arr) && Array.isArray(correctArr)) {
-       const correct = arr.filter((ans, i) => ans === (correctArr[i] as any).correctIndex).length
-       scores[skill] = Math.round((correct / arr.length) * 100)
-    } else {
-       scores[skill] = 0;
-    }
+export async function saveSkillTestResult(uid: string, scores: Record<string, number>) {
+  const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore')
+  const { db } = await import('../firebase')
+
+  const matchScore = Math.round(
+    (scores.excel * 0.3) + (scores.canva * 0.3) +
+    (scores.english * 0.2) + (scores.digitalLiteracy * 0.2)
+  )
+
+  const recommendedJob =
+    scores.canva >= 70 ? 'Social Media Specialist' :
+    scores.excel >= 70 ? 'Data Entry & Admin' :
+    scores.english >= 70 ? 'Marketing Assistant' : 'Admin & Keuangan'
+
+  await updateDoc(doc(db, 'users', uid), {
+    skillScores: scores,
+    matchScore,
+    recommendedJob,
+    testCompletedAt: serverTimestamp(),
   })
-  return scores
+
+  return { matchScore, recommendedJob }
 }
